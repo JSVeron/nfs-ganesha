@@ -3,7 +3,7 @@ add_definitions(
 )
 
 SET(fsalqsfs_LIB_SRCS
-  up.c
+  #up.c
   main.c
   export.c
   handle.c
