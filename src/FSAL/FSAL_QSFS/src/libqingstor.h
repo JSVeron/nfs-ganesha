@@ -31,7 +31,7 @@ typedef enum {
   QS_FS_TYPE_NIL = 0,
   QS_FS_TYPE_FILE,
   QS_FS_TYPE_DIRECTORY,
-}qingstor_fh_type ;
+} qingstor_fh_type ;
 /* content-addressable hash */
 struct qingstor_fh_hk {
   uint64_t bucket;
@@ -114,8 +114,8 @@ int qingstor_readdir(struct qingstor_file_system *qs_fs,
 #define QS_GETATTR_FLAG_NONE      0x0000
 
 int qingstor_getattr(struct qingstor_file_system *qs_fs,
-                      struct qingstor_file_handle *fh, struct stat *st,
-                      uint32_t flags);
+                     struct qingstor_file_handle *fh, struct stat *st,
+                     uint32_t flags);
 
 /*
    set unix attributes for object
@@ -144,8 +144,11 @@ int qingstor_mount(libqs_t libqsfs, const char *uid, const char *bucket_name,
                    const char *zone, struct qingstor_file_system ** qs_fs,
                    uint32_t flags);
 
+int qingstor_umount(qingstor_file_system * qs_fs, uint32_t flags);
 
-
+int qingstor_statfs(struct qingstor_file_system *qs_fs,
+                    struct qingstor_file_handle *parent_fh,
+                    struct qingstor_statvfs *vfs_st, uint32_t flags);
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /*
 

@@ -65,10 +65,10 @@ int qingstor_lookup_handle(struct qingstor_file_system *qs_fs, struct qingstor_f
   QsFileSystem *fs = static_cast<QsFileSystem*>(qs_fs->fs_private);
 
   //QsFileHandle* qs_fh = fs->lookup_handle(*fh_hk);
- // if (! qs_fh) {
-    /* not found */
-    //return -ENOENT;
- // }
+// if (! qs_fh) {
+  /* not found */
+  //return -ENOENT;
+// }
 
   //struct qingstor_file_handle *rfh = qs_fh->get_fh();
   //*fh = rfh;
@@ -179,8 +179,8 @@ int qingstor_rename(struct qingstor_file_system *qs_fs,
  attach QingStor namespace
 */
 int qingstor_mount( libqs_t libqsfs, const char *uid, const char *bucket_name,
-                   const char *zone, struct qingstor_file_system **qs_fs,
-                   uint32_t flags)
+                    const char *zone, struct qingstor_file_system **qs_fs,
+                    uint32_t flags)
 {
   int rc = 0;
   if ( bucket_name || zone )
@@ -237,7 +237,30 @@ int qingstor_umount(qingstor_file_system * qs_fs, uint32_t flags)
   return 0;
 }
 
+/*
+    get filesystem attributes
+  */
+int qingstor_statfs(struct qingstor_file_system *qs_fs,
+                    struct qingstor_file_handle *parent_fh,
+                    struct qingstor_statvfs *vfs_st, uint32_t flags)
+{
+  QsFileSystem *fs = static_cast<QsFileSystem*>(qs_fs->fs_private);
 
+  /* XXX for now, just publish a huge capacity and
+   * limited utiliztion */
+  vfs_st->f_bsize = 1024 * 1024 /* 1M */;
+  vfs_st->f_frsize = 1024;    /* minimal allocation unit (who cares) */
+  vfs_st->f_blocks = UINT64_MAX;
+  vfs_st->f_bfree = UINT64_MAX;
+  vfs_st->f_bavail = UINT64_MAX;
+  vfs_st->f_files = 1024; /* object count, do we have an est? */
+  vfs_st->f_ffree = UINT64_MAX;
+  vfs_st->f_fsid[0] = fs->get_inst();
+  vfs_st->f_fsid[1] = fs->get_inst();
+  vfs_st->f_flag = 0;
+  vfs_st->f_namemax = 4096;
+  return 0;
+}
 
 //////////////////////////////////////////
 /*
