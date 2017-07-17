@@ -60,6 +60,11 @@ Requires: openSUSE-release
 @BCOND_RGW@ rgw
 %global use_fsal_rgw %{on_off_switch rgw}
 
+# === morven ===
+@BCOND_QSFS@ qsfs
+%global use_fsal_qsfs %{on_off_switch qsfs}
+
+
 @BCOND_GLUSTER@ gluster
 %global use_fsal_gluster %{on_off_switch gluster}
 

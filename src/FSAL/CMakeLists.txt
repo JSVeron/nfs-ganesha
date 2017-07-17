@@ -19,6 +19,11 @@ if(USE_FSAL_RGW)
   add_subdirectory(FSAL_RGW)
 endif(USE_FSAL_RGW)
 
+# === morven ===
+if(USE_FSAL_QSFS)
+  add_subdirectory(FSAL_QSFS)
+endif(USE_FSAL_QSFS)
+
 if(USE_FSAL_GPFS)
   add_subdirectory(FSAL_GPFS)
 endif(USE_FSAL_GPFS)

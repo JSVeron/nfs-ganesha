@@ -202,6 +202,9 @@ option(USE_FSAL_PANFS "build PanFS support in VFS FSAL" OFF)
 option(USE_FSAL_GLUSTER "build GLUSTER FSAL shared library" ON)
 option(USE_FSAL_NULL "build NULL FSAL shared library" ON)
 option(USE_FSAL_RGW "build RGW FSAL shared library" OFF)
+# === morven ===
+option(USE_FSAL_QSFS "build QingStor FSAL shared library" ON)
+
 option(USE_FSAL_MEM "build Memory FSAL shared library" ON)
 option(USE_TOOL_MULTILOCK "build multilock tool" OFF)
 
@@ -600,6 +603,15 @@ if(USE_FSAL_RGW)
   endif(NOT RGW_FOUND)
 endif(USE_FSAL_RGW)
 
+# === morven ===
+if(USE_FSAL_QSFS)
+  find_package(QSFS)
+  if(NOT QSFS_FOUND)
+      message("========= QSFS_FOUND !!======================")
+  endif(NOT QSFS_FOUND)
+endif(USE_FSAL_QSFS)
+
+
 if(USE_FSAL_XFS)
   if(EXISTS /lib/libhandle.so)
     check_library_exists(handle "open_by_handle" "/./lib" HAVE_XFS_LIB)
@@ -973,6 +985,9 @@ message(STATUS "USE_FSAL_CEPH_SETLK = ${USE_FSAL_CEPH_SETLK}")
 message(STATUS "USE_FSAL_CEPH_LL_LOOKUP_ROOT = ${USE_FSAL_CEPH_LL_LOOKUP_ROOT}")
 message(STATUS "USE_FSAL_CEPH_STATX = ${USE_FSAL_CEPH_STATX}")
 message(STATUS "USE_FSAL_RGW = ${USE_FSAL_RGW}")
+# === morven ===
+message(STATUS "USE_FSAL_QSFS = ${USE_FSAL_QSFS}")
+
 message(STATUS "USE_FSAL_XFS = ${USE_FSAL_XFS}")
 message(STATUS "USE_FSAL_PANFS = ${USE_FSAL_PANFS}")
 message(STATUS "USE_FSAL_GPFS = ${USE_FSAL_GPFS}")
@@ -1017,6 +1032,11 @@ message(STATUS "USE_NLM = ${USE_NLM}")
 message(STATUS "KRB5_PREFIX = ${KRB5_PREFIX}")
 message(STATUS "CEPH_PREFIX = ${CEPH_PREFIX}")
 message(STATUS "RGW_PREFIX = ${RGW_PREFIX}")
+# === morven ===
+message("============== morven ====================")
+message(STATUS "QSFS_PREFIX = ${QSFS_PREFIX}")
+message("============== morven ====================")
+
 message(STATUS "GLUSTER_PREFIX = ${GLUSTER_PREFIX}")
 message(STATUS "ZFS_PREFIX = ${ZFS_PREFIX}")
 message(STATUS "CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
@@ -1056,6 +1076,12 @@ set(USE_FSAL_CEPH ${USE_FSAL_CEPH}
  set(USE_FSAL_RGW ${USE_FSAL_RGW}
   CACHE BOOL
    "build RGW FSAL shared library"
+   FORCE)
+
+# === morven ===
+set(USE_FSAL_QSFS ${USE_FSAL_QSFS}
+  CACHE BOOL
+   "build QingStor FSAL shared library"
    FORCE)
 
 set(USE_FSAL_XFS ${USE_FSAL_XFS}
@@ -1250,6 +1276,12 @@ if(USE_FSAL_RGW)
 else(USE_FSAL_RGW)
     set(BCOND_RGW "%bcond_with")
 endif(USE_FSAL_RGW)
+
+if(USE_FSAL_QSFS)
+    set(BCOND_QSFS "%bcond_without")
+else(USE_FSAL_QSFS)
+    set(BCOND_QSFS "%bcond_with")
+endif(USE_FSAL_QSFS)
 
 if(USE_FSAL_GLUSTER)
     set(BCOND_GLUSTER "%bcond_without")
