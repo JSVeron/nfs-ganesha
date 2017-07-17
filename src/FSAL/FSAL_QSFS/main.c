@@ -48,7 +48,7 @@ static struct fsal_staticfsinfo_t default_qingstor_info = {
 	.acl_support = false,
 	.cansettime = true,
 	.homogenous = true,
-	.supported_attrs = QINGSTOR_SUPPORTED_ATTRIBUTES,
+	.supported_attrs = QS_SUPPORTED_ATTRIBUTES,
 	.maxread = FSAL_MAXIOSIZE,
 	.maxwrite = FSAL_MAXIOSIZE,
 	.umask = 0,
@@ -82,6 +82,8 @@ struct config_block qingstor_block = {
 	.blk_desc.u.blk.commit = noop_conf_commit
 };
 
+
+static pthread_mutex_t init_mtx = PTHREAD_MUTEX_INITIALIZER;
 
 /* init_config
  * must be called with a reference taken (via lookup_fsal)
@@ -146,10 +148,10 @@ static struct config_item export_params[] = {
 	CONF_ITEM_NOOP("name"),
 	//CONF_MAND_STR("user_id", 0, MAXUIDLEN, NULL,
 	//qs_fsal_export, qingstor_user_id),
-	CONF_MAND_STR("qs_bucket_name", 0, MAXKEYLEN, NULL,
-	qs_fsal_export, qingstor_access_key_id),
-	CONF_MAND_STR("qs_zone", 0, MAXSECRETLEN, NULL,
-	qs_fsal_export, qingstor_secret_access_key),
+	CONF_MAND_STR("qs_fsal_bucket_name", 0, MAXKEYLEN, NULL,
+	qs_fsal_export, qs_fsal_zone),
+	CONF_MAND_STR("qs_fsal_bucket_name", 0, MAXSECRETLEN, NULL,
+	qs_fsal_export, qs_fsal_zone),
 	CONFIG_EOL
 };
 
@@ -183,12 +185,12 @@ static fsal_status_t create_export(struct fsal_module *module_in,
 	bool initialized = false;
 
 	/* once */
-	if (!QSFSM.libqs) {
+	if (!QSFSM.libqsfs) {
 		PTHREAD_MUTEX_lock(&init_mtx);
-		if (!QSFSM.libqs) {
+		if (!QSFSM.libqsfs) {
 
 			if (QSFSM.conf_path) {
-				rc = librqs_create(&QSFSM.libqs, QSFSM.conf_path);
+				rc = librqs_create(QSFSM.libqsfs, QSFSM.conf_path);
 				if (rc != 0) {
 					LogCrit(COMPONENT_FSAL,
 					        "QINGSTOR module: librqs init failed (%d)",
@@ -204,7 +206,7 @@ static fsal_status_t create_export(struct fsal_module *module_in,
 		goto error;
 	}
 
-	export = gsh_calloc(1, sizeof(struct qingstor_export));
+	export = gsh_calloc(1, sizeof(struct qs_fsal_export));
 	if (export == NULL) {
 		status.major = ERR_FSAL_NOMEM;
 		LogCrit(COMPONENT_FSAL,
@@ -234,12 +236,11 @@ static fsal_status_t create_export(struct fsal_module *module_in,
 
 	// 挂载得到qs_fs，即
 	// 本质上是为了得到qingstor_fs结构并记录在export中，将来使用
-
-	qs_fsal_status = qingstor_mount(QSFSM.libqs,
+	qs_fsal_status = qingstor_mount(QSFSM.libqsfs,
 	                                export->qs_fsal_user_id,
 	                                export->qs_fsal_bucket_name,
 	                                export->qs_fsal_zone,
-	                                &export->qs_fs,
+	                                &(export->qs_fs),
 	                                QS_MOUNT_FLAG_NONE);
 	if (qs_fsal_status != 0) {
 		status.major = ERR_FSAL_SERVERFAULT;
@@ -332,7 +333,7 @@ MODULE_INIT void init(void)
 	memset(myself, 0, sizeof(*myself));
 
 	if (register_fsal(myself, module_name, FSAL_MAJOR_VERSION,
-	                  FSAL_MINOR_VERSION, FSAL_ID_QINGSTOR) != 0) {
+	                  FSAL_MINOR_VERSION, FSAL_ID_QSFS) != 0) {
 		/* The register_fsal function prints its own log
 		   message if it fails */
 		LogCrit(COMPONENT_FSAL,
@@ -368,8 +369,9 @@ MODULE_FINI void finish(void)
 
 	/* release the library */
 
-	if (QSFSM.libqs) {
+	if (QSFSM.libqsfs) {
 		/////???????????
-		libqsfs_shutdown(QSFSM.libqs);
+		libqsfs_shutdown(QSFSM.libqsfs);
 		//}
 	}
+}

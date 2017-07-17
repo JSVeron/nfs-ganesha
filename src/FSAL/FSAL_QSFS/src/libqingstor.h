@@ -1,8 +1,8 @@
 #pragma once
 #include <inttypes.h>
 
-#define likely(x)   __builtin_expect((x),1)
-#define unlikely(x)   __builtin_expect((x),0)
+//#define likely(x)   __builtin_expect((x),1)
+//#define unlikely(x)   __builtin_expect((x),0)
 
 #define QS_LOOKUP_FLAG_NONE    0x0000
 #define QS_LOOKUP_FLAG_CREATE_BACKEND  0x0001
@@ -18,94 +18,20 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
 typedef void* libqs_t;
 
-int libqsfs_create(libqs_t *libqsfs, int argc, char **argv); //库初始化
+int librqs_create(libqs_t libqsfs, const char* conf_path);//库初始化
 void libqsfs_shutdown(libqs_t libqsfs); //库去初始化
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-
-/*
- * release file handle
- */
-void qingstor_fh_release(struct qingstor_file_system *qs_fs, struct qingstor_file_handle *qs_fh,
-                         uint32_t flags);
-
-/*
- * lookup file/dir handle
- */
-int qingstor_lookup(struct qingstor_file_system *qs_fs,
-                    struct qingstor_file_handle *parent_fh, const char* path,
-                    struct qingstor_file_handle **out_fh,
-                    uint32_t flags);
-
-/*
- * create file/dir handle
- */
-int qingstor_touchfile(struct qingstor_file_system *qs_fs,
-                       struct qingstor_file_handle *parent_fh,
-                       const char* path, struct stat *st, uint32_t mask,
-                       struct qingstor_file_handle **out_fh);
-
-/*
-    read  directory callback
-*/
-typedef bool (*qingstor_readdir_callback)(const char *name, void *arg, uint64_t offset);
-/*
-
-/*
-    read  directory content
-*/
-int qingstor_readdir(struct qingstor_file_system *qs_fs,
-                     struct qingstor_file_handle *parent_fh, uint64_t *offset,
-                     qingstor_readdir_callback rcb, void *cb_arg, bool *eof);
-
-
-/*
-   get unix attributes for object
-*/
-#define QS_GETATTR_FLAG_NONE      0x0000
-
-void qingstor_getattr(struct qingstor_file_system *qs_fs,
-                      struct qingstor_file_handle *fh, struct stat *st,
-                      uint32_t flags);
-
-/*
-   set unix attributes for object
-*/
-#define QS_SETATTR_FLAG_NONE      0x0000
-
-int qingstor_setattr(struct qingstor_file_system *qs_fs,
-                     struct qingstor_file_handle *fh, struct stat *st,
-                     uint32_t mask, uint32_t flags);
-
-
-
-/*
-   set unix attributes for object
-*/
-int qingstor_rename(struct qingstor_file_system *qs_fs,
-                    struct qingstor_file_handle *src, const char* src_name,
-                    struct qingstor_file_handle *dst, const char* dst_name);
-
-/*
- attach QingStor namespace
-*/
-#define QS_MOUNT_FLAG_NONE     0x0000
-
-int qingstor_mount(libqs_t libqsfs, const char *uid, const char *bucket_name,
-                   const char *zone, struct qingstor_file_system *qs_fs,
-                   uint32_t flags);
-
-
 
 
 /*
  * object types
  */
-enum qingstor_fh_type {
+typedef enum {
   QS_FS_TYPE_NIL = 0,
   QS_FS_TYPE_FILE,
   QS_FS_TYPE_DIRECTORY,
-};
+}qingstor_fh_type ;
 /* content-addressable hash */
 struct qingstor_fh_hk {
   uint64_t bucket;
@@ -144,6 +70,81 @@ struct qingstor_statvfs {
   uint64_t     f_flag;     /* mount flags */
   uint64_t     f_namemax;  /* maximum filename length */
 };
+
+////////////////////////////////////////////////////////////////
+/*
+ * release file handle
+ */
+void qingstor_fh_release(struct qingstor_file_system *qs_fs, struct qingstor_file_handle *qs_fh,
+                         uint32_t flags);
+
+/*
+ * lookup file/dir handle
+ */
+int qingstor_lookup(struct qingstor_file_system *qs_fs,
+                    struct qingstor_file_handle *parent_fh, const char* path,
+                    struct qingstor_file_handle **out_fh,
+                    uint32_t flags);
+
+/*
+ * create file/dir handle
+ */
+int qingstor_touchfile(struct qingstor_file_system *qs_fs,
+                       struct qingstor_file_handle *parent_fh,
+                       const char* path, struct stat *st, uint32_t mask,
+                       struct qingstor_file_handle **out_fh);
+
+/*
+    read  directory callback
+*/
+typedef bool (*qingstor_readdir_callback)(const char *name, void *arg, uint64_t offset);
+
+
+/*
+    read  directory content
+*/
+int qingstor_readdir(struct qingstor_file_system *qs_fs,
+                     struct qingstor_file_handle *parent_fh, uint64_t *offset,
+                     qingstor_readdir_callback rcb, void *cb_arg, bool *eof);
+
+
+/*
+   get unix attributes for object
+*/
+#define QS_GETATTR_FLAG_NONE      0x0000
+
+int qingstor_getattr(struct qingstor_file_system *qs_fs,
+                      struct qingstor_file_handle *fh, struct stat *st,
+                      uint32_t flags);
+
+/*
+   set unix attributes for object
+*/
+#define QS_SETATTR_FLAG_NONE      0x0000
+
+int qingstor_setattr(struct qingstor_file_system *qs_fs,
+                     struct qingstor_file_handle *fh, struct stat *st,
+                     uint32_t mask, uint32_t flags);
+
+
+
+/*
+   set unix attributes for object
+*/
+int qingstor_rename(struct qingstor_file_system *qs_fs,
+                    struct qingstor_file_handle *src, const char* src_name,
+                    struct qingstor_file_handle *dst, const char* dst_name);
+
+/*
+ attach QingStor namespace
+*/
+#define QS_MOUNT_FLAG_NONE     0x0000
+
+int qingstor_mount(libqs_t libqsfs, const char *uid, const char *bucket_name,
+                   const char *zone, struct qingstor_file_system ** qs_fs,
+                   uint32_t flags);
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /*

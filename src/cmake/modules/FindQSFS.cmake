@@ -16,18 +16,22 @@
 # The hint can be given on the command line too:
 #   cmake -DQSFS_PREFIX=/DATA/ERIC/QSFS /path/to/source
 
+
+message("============== huang ====================")
 if(QSFS_PREFIX)
   message(STATUS "FindQSFS: using PATH HINT: ${QSFS_PREFIX}")
   # Try to make the prefix override the normal paths
   find_path(QSFS_INCLUDE_DIR
-    NAMES include/qingstor/librqingstor.h
+    NAMES include/libqingstor.h
     PATHS ${QSFS_PREFIX}
     NO_DEFAULT_PATH
     DOC "The QingStor include headers")
-    message("QSFS_INCLUDE_DIR ${QSFS_INCLUDE_DIR}")
+
+    message("============== huang 1====================")
+    message("QSFS_INCLUDE_DIR = ${QSFS_INCLUDE_DIR}")
 
   find_path(QSFS_LIBRARY_DIR
-    NAMES libqsfs.so
+    NAMES libqsfs.a
     PATHS ${QSFS_PREFIX}
     PATH_SUFFIXES lib lib64
     NO_DEFAULT_PATH
@@ -37,21 +41,23 @@ endif()
 if (NOT QSFS_INCLUDE_DIR)
 # will find lib and headr file in default path
   find_path(QSFS_INCLUDE_DIR
-    NAMES include/qingstor/librqingstor.h
+    NAMES include/libqingstor.h
     PATHS ${QSFS_PREFIX}
     DOC "The QingStor include headers")
+    message("============== huang 2====================")
+    message("QSFS_INCLUDE_DIR = ${QSFS_INCLUDE_DIR}")
 endif (NOT QSFS_INCLUDE_DIR)
 
 if (NOT QSFS_LIBRARY_DIR)
 # will find lib and headr file in default path
   find_path(QSFS_LIBRARY_DIR
-    NAMES libqsfs.so
+    NAMES libqsfs.a
     PATHS ${QSFS_PREFIX}
     PATH_SUFFIXES lib lib64
     DOC "The QingStor libraries")
 endif (NOT QSFS_LIBRARY_DIR)
 
-find_library(QSFS_LIBRARY qsfs PATHS ${QSFS_LIBRARY_DIR} NO_DEFAULT_PATH)
+find_library(QSFS_LIBRARY libqsfs.a PATHS ${QSFS_LIBRARY_DIR} NO_DEFAULT_PATH)
 check_library_exists(qsfs qingstor_mount ${QSFS_LIBRARY_DIR} QSFSLIB)
 if (NOT QSFSLIB)
   unset(QSFS_LIBRARY_DIR CACHE)

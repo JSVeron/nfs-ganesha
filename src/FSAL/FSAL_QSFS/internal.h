@@ -30,6 +30,7 @@
 #include "fsal_convert.h"
 #include "sal_data.h"
 
+#include "src/libqingstor.h"
 
 /**
  * QINGSTOR Main (global) module object
@@ -95,11 +96,17 @@ struct qs_fsal_open_state {
  * Currently FSAL_RGW uses posix2fsal_attributes, so we should indicate support
  * for at least those attributes.
  */
-#define QINGSTOR_SUPPORTED_ATTRIBUTES ((const attrmask_t) (ATTRS_POSIX))
+#define QS_SUPPORTED_ATTRIBUTES ((const attrmask_t) (ATTRS_POSIX))
 
+static inline fsal_staticfsinfo_t *qs_fsal_staticinfo(struct fsal_module *hdl)
+{
+	struct qs_fsal_module *myself =
+	    container_of(hdl, struct qs_fsal_module, fsal);
+	return &myself->fs_info;
+}
 
 /* Prototypes */
-int construct_handle(struct qs_fasl_export *export,
+int construct_handle(struct qs_fsal_export *export,
                      struct qingstor_file_handle *rgw_file_handle,
                      struct stat *st,
                      struct qs_fsal_handle **obj);
@@ -107,3 +114,10 @@ int construct_handle(struct qs_fasl_export *export,
 void deconstruct_handle(struct qs_fsal_handle *obj);
 
 fsal_status_t qs2fsal_error(const int errorcode);
+
+void export_ops_init(struct export_ops *ops);
+void handle_ops_init(struct fsal_obj_ops *ops);
+struct state_t *qs_alloc_state(struct fsal_export * exp_hdl,
+                               enum state_type state_type,
+                               struct state_t *related_state);
+#endif

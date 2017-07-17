@@ -44,7 +44,7 @@
 static void release(struct fsal_export *export_pub)
 {
 	/* The private, expanded export */
-	struct qingstor_export *export =
+	struct qs_fsal_export *export =
 	    container_of(export_pub, struct qs_fsal_export, export);
 
 
@@ -290,7 +290,7 @@ static fsal_status_t get_fs_dynamic_info(struct fsal_export *export_pub,
 static bool fs_supports(struct fsal_export *export_pub,
                         fsal_fsinfo_options_t option)
 {
-	struct fsal_staticfsinfo_t *info = rgw_staticinfo(export_pub->fsal);
+	struct fsal_staticfsinfo_t *info = qs_fsal_staticinfo(export_pub->fsal);
 	return fsal_supports(info, option);
 }
 
@@ -436,7 +436,7 @@ static fsal_aclsupp_t fs_acl_support(struct fsal_export *export_pub)
 
 static attrmask_t fs_supported_attrs(struct fsal_export *export_pub)
 {
-	return RGW_SUPPORTED_ATTRIBUTES;
+	return QS_SUPPORTED_ATTRIBUTES;
 }
 
 /**
@@ -451,7 +451,7 @@ static attrmask_t fs_supported_attrs(struct fsal_export *export_pub)
 
 static uint32_t fs_umask(struct fsal_export *export_pub)
 {
-	return fsal_umask(rgw_staticinfo(export_pub->fsal));
+	return fsal_umask(qs_fsal_staticinfo(export_pub->fsal));
 }
 
 /**
@@ -467,7 +467,7 @@ static uint32_t fs_umask(struct fsal_export *export_pub)
 
 static uint32_t fs_xattr_access_rights(struct fsal_export *export_pub)
 {
-	return fsal_xattr_access_rights(rgw_staticinfo(export_pub->fsal));
+	return fsal_xattr_access_rights(qs_fsal_staticinfo(export_pub->fsal));
 }
 
 /**
@@ -500,5 +500,5 @@ void export_ops_init(struct export_ops *ops)
 	ops->fs_supported_attrs = fs_supported_attrs;
 	ops->fs_umask = fs_umask;
 	ops->fs_xattr_access_rights = fs_xattr_access_rights;
-	ops->alloc_state = rgw_alloc_state;
+	ops->alloc_state = qs_alloc_state;
 }
