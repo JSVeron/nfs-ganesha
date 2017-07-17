@@ -48,8 +48,14 @@ static void release(struct fsal_export *export_pub)
 	    container_of(export_pub, struct qs_fsal_export, export);
 
 
-	int rc = qingstor_umount(export->qs_fs, QS_UMOUNT_FLAG_NONE);
+	int rc = qingstor_umount(export->qs_fs, QS_UNMOUNT_FLAG_NONE);
 	//assert(rc == 0);
+	if(rc == 0)
+	{
+		LogFatal(COMPONENT_FSAL,
+	         "qingstor unmount err.");
+		return;
+	}
 
 	deconstruct_handle(export->root);
 	export->qs_fs = NULL;
@@ -84,8 +90,8 @@ static fsal_status_t lookup_path(struct fsal_export *export_pub,
                                  struct attrlist *attrs_out)
 {
 	/* The 'private' full export handle */
-	struct qingstor_export *export =
-	    container_of(export_pub, struct qingstor_export, export);
+	struct qs_fsal_export *export =
+	    container_of(export_pub, struct qs_fsal_export, export);
 	/* The 'private' full object handle */
 	struct qs_fsal_handle *handle = NULL;
 	/* FSAL status structure */
@@ -183,8 +189,8 @@ static fsal_status_t create_handle(struct fsal_export *export_pub,
                                    struct attrlist *attrs_out)
 {
 	/* Full 'private' export structure */
-	struct qingstor_export *export =
-	    container_of(export_pub, struct qingstor_export, export);
+	struct qs_fsal_export *export =
+	    container_of(export_pub, struct qs_fsal_export, export);
 	/* FSAL status to return */
 	fsal_status_t status = { ERR_FSAL_NO_ERROR, 0 };
 	/* The FSAL specific portion of the handle received by the
@@ -208,12 +214,12 @@ static fsal_status_t create_handle(struct fsal_export *export_pub,
 
 	memcpy((char *) &fh_hk, desc->addr, desc->len);
 
-	rc = qingstor_lookup_handle(export->rgw_fs, &fh_hk, &qs_fh,
-	                            RGW_LOOKUP_FLAG_NONE);
+	rc = qingstor_lookup_handle(export->qs_fs, &fh_hk, &qs_fh,
+	                            QS_LOOKUP_FLAG_NONE);
 	if (rc < 0)
 		return qs2fsal_error(-ESTALE);
 
-	rc = qingstor_getattr(export->qs_fs, qs_fh, &st, RGW_GETATTR_FLAG_NONE);
+	rc = qingstor_getattr(export->qs_fs, qs_fh, &st, QS_GETATTR_FLAG_NONE);
 	if (rc < 0)
 		return qs2fsal_error(rc);
 
@@ -248,16 +254,16 @@ static fsal_status_t get_fs_dynamic_info(struct fsal_export *export_pub,
         fsal_dynamicfsinfo_t *info)
 {
 	/* Full 'private' export */
-	struct qingstor_export *export =
-	    container_of(export_pub, struct qingstor_export, export);
+	struct qs_fsal_export *export =
+	    container_of(export_pub, struct qs_fsal_export, export);
 
 	int rc = 0;
 
 	/* Filesystem stat */
 	struct qingstor_statvfs vfs_st;
 
-	rc = rgw_statfs(export->qs_fs, export->qs_fs->root_fh, &vfs_st,
-	                RGW_STATFS_FLAG_NONE);
+	rc = qingstor_statfs(export->qs_fs, export->qs_fs->root_fh, &vfs_st,
+	                QS_STATFS_FLAG_NONE);
 	if (rc < 0)
 		return qs2fsal_error(rc);
 

@@ -86,6 +86,9 @@ int qingstor_lookup(struct qingstor_file_system *qs_fs,
                     struct qingstor_file_handle **out_fh,
                     uint32_t flags);
 
+int qingstor_lookup_handle(struct qingstor_file_system *qs_fs, struct qingstor_fh_hk *fh_hk,
+                           struct qingstor_file_handle **fh, uint32_t flags);
+
 /*
  * create file/dir handle
  */
@@ -93,6 +96,17 @@ int qingstor_touchfile(struct qingstor_file_system *qs_fs,
                        struct qingstor_file_handle *parent_fh,
                        const char* path, struct stat *st, uint32_t mask,
                        struct qingstor_file_handle **out_fh);
+
+/*
+    make  directory 
+*/
+#define QS_MKDIR_FLAG_NONE      0x0000
+
+int qingstor_mkdir(struct qingstor_file_system *qs_fs,
+                       struct qingstor_file_handle *parent_fh,
+                       const char* name, struct stat *st, uint32_t mask,
+                       struct qingstor_file_handle **out_fh,
+                       uint32_t flags);
 
 /*
     read  directory callback
@@ -126,15 +140,15 @@ int qingstor_setattr(struct qingstor_file_system *qs_fs,
                      struct qingstor_file_handle *fh, struct stat *st,
                      uint32_t mask, uint32_t flags);
 
-
-
 /*
    set unix attributes for object
 */
+#define QS_RENAME_FLAG_NONE      0x0000
+
 int qingstor_rename(struct qingstor_file_system *qs_fs,
                     struct qingstor_file_handle *src, const char* src_name,
-                    struct qingstor_file_handle *dst, const char* dst_name);
-
+                    struct qingstor_file_handle *dst, const char* dst_name,
+                    uint32_t flags);
 /*
  attach QingStor namespace
 */
@@ -144,11 +158,18 @@ int qingstor_mount(libqs_t libqsfs, const char *uid, const char *bucket_name,
                    const char *zone, struct qingstor_file_system ** qs_fs,
                    uint32_t flags);
 
-int qingstor_umount(qingstor_file_system * qs_fs, uint32_t flags);
+#define QS_UNMOUNT_FLAG_NONE     0x0000
+
+int qingstor_umount(struct qingstor_file_system * qs_fs, uint32_t flags);
+
+
+#define QS_STATFS_FLAG_NONE     0x0000
 
 int qingstor_statfs(struct qingstor_file_system *qs_fs,
                     struct qingstor_file_handle *parent_fh,
                     struct qingstor_statvfs *vfs_st, uint32_t flags);
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 /*
 

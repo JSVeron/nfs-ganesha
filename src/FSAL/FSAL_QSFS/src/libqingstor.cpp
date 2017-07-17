@@ -226,7 +226,7 @@ int qingstor_mount( libqs_t libqsfs, const char *uid, const char *bucket_name,
 /*
  detach QingStor namespace
 */
-int qingstor_umount(qingstor_file_system * qs_fs, uint32_t flags)
+int qingstor_umount(struct qingstor_file_system * qs_fs, uint32_t flags)
 {
   QsFileSystem *fs = static_cast<QsFileSystem*>(qs_fs->fs_private);
   if (fs)

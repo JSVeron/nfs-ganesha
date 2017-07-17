@@ -14,10 +14,7 @@
 // | See the License for the specific language governing permissions and
 // | limitations under the License.
 // +-------------------------------------------------------------------------
-
-/* handle.c
- * RGW object (file|dir) handle object
- */
+*/
 
 #include <fcntl.h>
 #include "fsal.h"
@@ -29,13 +26,6 @@
 #include "FSAL/fsal_commonlib.h"
 
 extern __thread struct req_op_context *op_ctx;
-
-struct qs_fsal_cb_arg {
-	fsal_readdir_cb cb;
-	void *fsal_arg;
-	struct fsal_obj_handle *dir_hdl;
-	attrmask_t attrmask;
-};
 
 /**
  * @brief Release an object
@@ -62,31 +52,6 @@ static void release(struct fsal_obj_handle *obj_hdl)
 	}
 	deconstruct_handle(obj);
 }
-
-/**
- * @brief Look up an object by name
- *
- * This function looks up an object by name in a directory.
- *
- * @param[in]     dir_hdl    The directory in which to look up the object.
- * @param[in]     path       The name to look up.
- * @param[in,out] obj_hdl    The looked up object.
- * @param[in,out] attrs_out  Optional attributes for newly created object
- *
- * @return FSAL status codes.
- */
-static fsal_status_t lookup(struct fsal_obj_handle *dir_hdl,
-                            const char *path, struct fsal_obj_handle **obj_hdl,
-                            struct attrlist *attrs_out)
-{
-	LogCrit(COMPONENT_FSAL,
-	        "=================== %s with obj_hdl: %p, path: %s =====================",
-	        __func__, obj_hdl, path);
-
-	return _lookup_private(dir_hdl, path, obj_hdl, attrs_out,
-	                       QS_LOOKUP_FLAG_NONE);
-}
-
 
 /**
  * @brief Look up an object by name
@@ -129,7 +94,7 @@ static fsal_status_t _lookup_private(struct fsal_obj_handle *dir_hdl,
 	if (rc < 0)
 		return qs2fsal_error(rc);
 
-	rc = qingstor_getattr(export->qs_fs, qs_fh, &st, RGW_GETATTR_FLAG_NONE);
+	rc = qingstor_getattr(export->qs_fs, qs_fh, &st, QS_GETATTR_FLAG_NONE);
 	if (rc < 0)
 		return qs2fsal_error(rc);
 
@@ -146,6 +111,33 @@ static fsal_status_t _lookup_private(struct fsal_obj_handle *dir_hdl,
 
 	return fsalstat(0, 0);
 }
+
+
+/**
+ * @brief Look up an object by name
+ *
+ * This function looks up an object by name in a directory.
+ *
+ * @param[in]     dir_hdl    The directory in which to look up the object.
+ * @param[in]     path       The name to look up.
+ * @param[in,out] obj_hdl    The looked up object.
+ * @param[in,out] attrs_out  Optional attributes for newly created object
+ *
+ * @return FSAL status codes.
+ */
+static fsal_status_t lookup(struct fsal_obj_handle *dir_hdl,
+                            const char *path, struct fsal_obj_handle **obj_hdl,
+                            struct attrlist *attrs_out)
+{
+	LogCrit(COMPONENT_FSAL,
+	        "=================== %s with obj_hdl: %p, path: %s =====================",
+	        __func__, obj_hdl, path);
+
+	return _lookup_private(dir_hdl, path, obj_hdl, attrs_out,
+	                       QS_LOOKUP_FLAG_NONE);
+}
+
+
 
 /**
  * @brief Create a regular file
@@ -169,7 +161,7 @@ static fsal_status_t qs_fsal_create(struct fsal_obj_handle *dir_hdl,
 {
 	LogCrit(COMPONENT_FSAL,
 	        "=================== %s with dir_hdl:%p,  obj_hdl: %p, name: %s =====================",
-	        __func__, dir_hdl, name);
+	        __func__, dir_hdl, obj_hdl, name);
 
 	int rc;
 	struct qingstor_file_handle *qs_fh;
@@ -193,7 +185,7 @@ static fsal_status_t qs_fsal_create(struct fsal_obj_handle *dir_hdl,
 	             & ~op_ctx->fsal_export->exp_ops.fs_umask(op_ctx->fsal_export);
 
 	uint32_t create_mask =
-	    RGW_SETATTR_UID | RGW_SETATTR_GID | RGW_SETATTR_MODE;
+	    QS_SETATTR_UID | QS_SETATTR_GID | QS_SETATTR_MODE;
 
 	rc = qingstor_touchfile(export->qs_fs, dir->qs_fh, name, &st,
 	                        create_mask, &qs_fh);
@@ -264,10 +256,10 @@ static fsal_status_t qs_fsal_mkdir(struct fsal_obj_handle *dir_hdl,
 	             & ~op_ctx->fsal_export->exp_ops.fs_umask(op_ctx->fsal_export);
 
 	uint32_t create_mask =
-	    RGW_SETATTR_UID | RGW_SETATTR_GID | RGW_SETATTR_MODE;
+	    QS_SETATTR_UID | QS_SETATTR_GID | QS_SETATTR_MODE;
 
 	rc = qingstor_mkdir(export->qs_fs, dir->qs_fh, name, &st,
-	                    create_mask, &qs_fh);
+	                    create_mask, &qs_fh, QS_MKDIR_FLAG_NONE);
 	if (rc < 0)
 		return qs2fsal_error(rc);
 
@@ -285,13 +277,14 @@ static fsal_status_t qs_fsal_mkdir(struct fsal_obj_handle *dir_hdl,
 	return fsalstat(ERR_FSAL_NO_ERROR, 0);
 }
 
-struct qingstor_cb_arg {
+/*
+struct qs_fsal_cb_arg {
 	fsal_readdir_cb cb;
 	void *fsal_arg;
 	struct fsal_obj_handle *dir_hdl;
 	attrmask_t attrmask;
-	struct attrlist attrs; // morven
 };
+*/
 
 static bool qingstor_rcb(const char *name, void *arg, uint64_t offset)
 {
@@ -299,18 +292,18 @@ static bool qingstor_rcb(const char *name, void *arg, uint64_t offset)
 	        "=================== %s with name: %s =====================",
 	        __func__, name);
 
-	struct qs_fsal_handle *obj;
-
-	struct qingstor_cb_arg *qs_cb_arg = (qingstor_cb_arg *)arg;
 	struct attrlist attrs;
-	struct fsal_obj_handle *obj_hdl;
+	//struct fsal_obj_handle *obj_hdl;
 	fsal_status_t status;
 
 	enum fsal_dir_result cb_rc;
 
+	struct fsal_obj_handle *obj;
+	struct qs_fsal_cb_arg *qs_cb_arg = (struct qs_fsal_cb_arg *)arg;
+
 	fsal_prepare_attrs(&attrs, qs_cb_arg->attrmask);
 
-	status = _lookup_private(qingstor_cb_arg->dir_hdl, name, &obj, &attrs , QS_LOOKUP_FLAG_NONE);
+	status = _lookup_private(qs_cb_arg->dir_hdl, name, &obj, &attrs , QS_LOOKUP_FLAG_NONE);
 	if (FSAL_IS_ERROR(status))
 		return false;
 
@@ -348,7 +341,7 @@ static fsal_status_t qs_fsal_readdir(struct fsal_obj_handle *dir_hdl,
 {
 	LogCrit(COMPONENT_FSAL,
 	        "=================== %s with dir_hdl:%p =====================",
-	        __func__, dir_hdl,);
+	        __func__, dir_hdl);
 
 	int rc;
 	fsal_status_t fsal_status = {ERR_FSAL_NO_ERROR, 0};
@@ -402,7 +395,7 @@ static fsal_status_t qs_fsal_getattrs(struct fsal_obj_handle *obj_hdl,
 	LogFullDebug(COMPONENT_FSAL,
 	             "%s enter obj_hdl %p", __func__, obj_hdl);
 
-	rc = qingstor_getattr(export->qs_fs, handle->qs_fh, &st);
+	rc = qingstor_getattr(export->qs_fs, handle->qs_fh, &st, QS_GETATTR_FLAG_NONE);
 
 	if (rc < 0) {
 		if (attrs->request_mask & ATTR_RDATTR_ERR) {
@@ -459,7 +452,7 @@ static fsal_status_t qs_fsal_rename(struct fsal_obj_handle *obj_hdl,
 	rc = qingstor_rename(export->qs_fs, olddir->qs_fh, old_name,
 	                     newdir->qs_fh, new_name, QS_RENAME_FLAG_NONE);
 	if (rc < 0)
-		return rgw2fsal_error(rc);
+		return qs2fsal_error(rc);
 
 	return fsalstat(ERR_FSAL_NO_ERROR, 0);
 }
@@ -486,8 +479,8 @@ static void handle_to_key(struct fsal_obj_handle *obj_hdl,
 	struct qs_fsal_handle *handle = container_of(obj_hdl, struct qs_fsal_handle,
 	                                handle);
 
-	fh_desc->addr = &(handle->qingstor_file_handle->fh_hk);
-	fh_desc->len = sizeof(struct rgw_fh_hk);
+	fh_desc->addr = &(handle->qs_fh->fh_hk);
+	fh_desc->len = sizeof(struct qingstor_fh_hk);
 }
 
 
@@ -552,389 +545,10 @@ fsal_status_t qs_fsal_open2(struct fsal_obj_handle *obj_hdl,
 	        "=================== %s with obj_hdl: %p ,name:%p =====================",
 	        __func__, obj_hdl, name);
 
-	int posix_flags = 0;
-	int rc;
-	mode_t unix_mode;
-	fsal_status_t status = {0, 0};
-	struct stat st;
-	bool truncated;
-	bool setattrs = attrib_set != NULL;
-	bool created = false;
-	struct attrlist verifier_attr;
-	struct qs_fsal_open_state *open_state = NULL;
-	struct qingstor_file_handle *qs_fh;
-	struct rgw_handle *obj;
-
-	///////////
-
-	struct qs_fsal_export *export =
-	    container_of(op_ctx->fsal_export, struct qs_fsal_export, export);
-
-	struct qs_fsal_handle *handle = container_of(obj_hdl, struct qs_fsal_handle,
-	                                handle);
-
-	LogFullDebug(COMPONENT_FSAL,
-	             "%s enter obj_hdl %p state %p", __func__, obj_hdl, open_state);
-
-	///////////
-
-
-	if (state) {
-		open_state = (struct qs_fsal_open_state *) state;
-	}
-
-	if (setattrs)
-		LogAttrlist(COMPONENT_FSAL, NIV_FULL_DEBUG,
-		            "attrs ", attrib_set, false);
-
-	fsal2posix_openflags(openflags, &posix_flags);
-
-	truncated = (posix_flags & O_TRUNC) != 0;
-
-	/* Now fixup attrs for verifier if exclusive create */
-	if (createmode >= FSAL_EXCLUSIVE) {
-		if (!setattrs) {
-			/* We need to use verifier_attr */
-			attrib_set = &verifier_attr;
-			memset(&verifier_attr, 0, sizeof(verifier_attr));
-		}
-
-		set_common_verifier(attrib_set, verifier);
-	}
-
-	if (!name) {
-		/* This is an open by handle */
-		if (state) {
-			/* Prepare to take the share reservation, but only if we
-			 * are called with a valid state (if state is NULL the
-			 * caller is a stateless create such as NFS v3 CREATE).
-			 */
-
-			/* This can block over an I/O operation. */
-			PTHREAD_RWLOCK_wrlock(&obj_hdl->obj_lock);
-
-			/* Check share reservation conflicts. */
-			status = check_share_conflict(&handle->share,
-			                              openflags, false);
-
-			if (FSAL_IS_ERROR(status)) {
-				PTHREAD_RWLOCK_unlock(&obj_hdl->obj_lock);
-				return status;
-			}
-
-			/* Take the share reservation now by updating the
-			 * counters.
-			 */
-			update_share_counters(&handle->share, FSAL_O_CLOSED,
-			                      openflags);
-
-			PTHREAD_RWLOCK_unlock(&obj_hdl->obj_lock);
-		} else {
-			/* we doesn't have a file descriptor/open abstraction,
-			 * and actually forbids concurrent opens;  This is
-			 * where more advanced FSALs would fall back to using
-			 * a "global" fd--what we always use;  We still need
-			 * to take the lock expected by ULP
-			 */
-#if 0
-			my_fd = &hdl->fd;
-#endif
-			PTHREAD_RWLOCK_wrlock(&obj_hdl->obj_lock);
-		}
-
-		rc = rgw_open(export->rgw_fs, handle->rgw_fh, posix_flags,
-		              (!state) ? RGW_OPEN_FLAG_V3 : RGW_OPEN_FLAG_NONE);
-
-		if (rc < 0) {
-			if (!state) {
-				/* Release the lock taken above, and return
-				 * since there is nothing to undo.
-				 */
-				PTHREAD_RWLOCK_unlock(&obj_hdl->obj_lock);
-				return rgw2fsal_error(rc);
-			} else {
-				/* Error - need to release the share */
-				goto undo_share;
-			}
-		}
-
-		if (createmode >= FSAL_EXCLUSIVE || truncated) {
-			/* refresh attributes */
-			rc = rgw_getattr(export->rgw_fs, handle->rgw_fh, &st,
-			                 RGW_GETATTR_FLAG_NONE);
-			if (rc < 0) {
-				status = rgw2fsal_error(rc);
-			} else {
-				LogFullDebug(COMPONENT_FSAL,
-				             "New size = %"PRIx64, st.st_size);
-				/* Now check verifier for exclusive, but not for
-				 * FSAL_EXCLUSIVE_9P.
-				 */
-				if (createmode >= FSAL_EXCLUSIVE &&
-				        createmode != FSAL_EXCLUSIVE_9P &&
-				        !obj_hdl->obj_ops.check_verifier(
-				            obj_hdl, verifier)) {
-					/* Verifier didn't match */
-					status =
-					    fsalstat(posix2fsal_error(
-					                 EEXIST),
-					             EEXIST);
-				}
-			}
-		}
-
-		if (!state) {
-			/* If no state, release the lock taken above and return
-			 * status. If success, we haven't done any permission
-			 * check so ask the caller to do so.
-			 */
-			PTHREAD_RWLOCK_unlock(&obj_hdl->obj_lock);
-			*caller_perm_check = !FSAL_IS_ERROR(status);
-			return status;
-		}
-
-		if (!FSAL_IS_ERROR(status)) {
-			/* Return success. We haven't done any permission
-			 * check so ask the caller to do so.
-			 */
-			*caller_perm_check = true;
-			return status;
-		}
-
-		/* close on error */
-		(void) rgw_close(export->rgw_fs, handle->rgw_fh,
-		                 RGW_CLOSE_FLAG_NONE);
-
-undo_share:
-
-		/* Can only get here with state not NULL and an error */
-
-		/* On error we need to release our share reservation
-		 * and undo the update of the share counters.
-		 * This can block over an I/O operation.
-		 */
-		PTHREAD_RWLOCK_wrlock(&obj_hdl->obj_lock);
-
-		update_share_counters(&handle->share, openflags, FSAL_O_CLOSED);
-
-		PTHREAD_RWLOCK_unlock(&obj_hdl->obj_lock);
-
-		return status;
-	} /* !name */
-
-	/* In this path where we are opening by name, we can't check share
-	 * reservation yet since we don't have an object_handle yet. If we
-	 * indeed create the object handle (there is no race with another
-	 * open by name), then there CAN NOT be a share conflict, otherwise
-	 * the share conflict will be resolved when the object handles are
-	 * merged.
-	 */
-
-	if (createmode == FSAL_NO_CREATE) {
-		/* Non creation case, librgw doesn't have open by name so we
-		 * have to do a lookup and then handle as an open by handle.
-		 */
-		struct fsal_obj_handle *temp = NULL;
-
-		/* We don't have open by name... */
-		status = obj_hdl->obj_ops.lookup(obj_hdl, name, &temp, NULL);
-
-		if (FSAL_IS_ERROR(status)) {
-			LogFullDebug(COMPONENT_FSAL,
-			             "lookup returned %s",
-			             fsal_err_txt(status));
-			return status;
-		}
-
-		/* Now call ourselves without name and attributes to open. */
-		status = obj_hdl->obj_ops.open2(temp, state, openflags,
-		                                FSAL_NO_CREATE, NULL, NULL,
-		                                verifier, new_obj,
-		                                attrs_out,
-		                                caller_perm_check);
-
-		if (FSAL_IS_ERROR(status)) {
-			/* Release the object we found by lookup. */
-			temp->obj_ops.release(temp);
-			LogFullDebug(COMPONENT_FSAL,
-			             "open returned %s",
-			             fsal_err_txt(status));
-		}
-
-		return status;
-	}
-
-	/* Now add in O_CREAT and O_EXCL.
-	 * Even with FSAL_UNGUARDED we try exclusive create first so
-	 * we can safely set attributes.
-	 */
-	if (createmode != FSAL_NO_CREATE) {
-		posix_flags |= O_CREAT;
-
-		if (createmode >= FSAL_GUARDED || setattrs)
-			posix_flags |= O_EXCL;
-	}
-
-	if (setattrs && FSAL_TEST_MASK(attrib_set->valid_mask, ATTR_MODE)) {
-		unix_mode = fsal2unix_mode(attrib_set->mode) &
-		            ~op_ctx->fsal_export->exp_ops.fs_umask(op_ctx->fsal_export);
-		/* Don't set the mode if we later set the attributes */
-		FSAL_UNSET_MASK(attrib_set->valid_mask, ATTR_MODE);
-	} else {
-		/* Default to mode 0600 */
-		unix_mode = 0600;
-	}
-
-	memset(&st, 0, sizeof(struct stat)); /* XXX needed? */
-
-	st.st_uid = op_ctx->creds->caller_uid;
-	st.st_gid = op_ctx->creds->caller_gid;
-	st.st_mode = unix_mode;
-
-	uint32_t create_mask =
-	    RGW_SETATTR_UID | RGW_SETATTR_GID | RGW_SETATTR_MODE;
-
-	rc = rgw_create(export->rgw_fs, handle->rgw_fh, name, &st, create_mask,
-	                &rgw_fh, posix_flags, RGW_CREATE_FLAG_NONE);
-	if (rc < 0) {
-		LogFullDebug(COMPONENT_FSAL,
-		             "Create %s failed with %s",
-		             name, strerror(-rc));
-	}
-
-	/* XXX won't get here, but maybe someday */
-	if (rc == -EEXIST && createmode == FSAL_UNCHECKED) {
-		/* We tried to create O_EXCL to set attributes and failed.
-		 * Remove O_EXCL and retry, also remember not to set attributes.
-		 * We still try O_CREAT again just in case file disappears out
-		 * from under us.
-		 */
-		posix_flags &= ~O_EXCL;
-		rc = rgw_create(export->rgw_fs, handle->rgw_fh, name, &st,
-		                create_mask, &rgw_fh, posix_flags,
-		                RGW_CREATE_FLAG_NONE);
-
-		if (rc < 0) {
-			LogFullDebug(COMPONENT_FSAL,
-			             "Non-exclusive Create %s failed with %s",
-			             name, strerror(-rc));
-		}
-	}
-
-	if (rc < 0) {
-		return rgw2fsal_error(rc);
-	}
-
-	/* Remember if we were responsible for creating the file.
-	 * Note that in an UNCHECKED retry we MIGHT have re-created the
-	 * file and won't remember that. Oh well, so in that rare case we
-	 * leak a partially created file if we have a subsequent error in here.
-	 * Since we were able to do the permission check even if we were not
-	 * creating the file, let the caller know the permission check has
-	 * already been done. Note it IS possible in the case of a race between
-	 * an UNCHECKED open and an external unlink, we did create the file.
-	 */
-	created = (posix_flags & O_EXCL) != 0;
-	*caller_perm_check = false;
-
-	construct_handle(export, rgw_fh, &st, &obj);
-
-	/* here FSAL_CEPH operates on its (for RGW non-existent) global
-	 * fd */
-#if 0
-	/* If we didn't have a state above, use the global fd. At this point,
-	 * since we just created the global fd, no one else can have a
-	 * reference to it, and thus we can mamnipulate unlocked which is
-	 * handy since we can then call setattr2 which WILL take the lock
-	 * without a double locking deadlock.
-	 */
-	if (my_fd == NULL)
-		my_fd = &hdl->fd;
-
-	my_fd->fd = fd;
-#endif
-	handle->openflags = openflags;
-
-	*new_obj = &obj->handle;
-
-	rc = rgw_open(export->rgw_fs, rgw_fh, posix_flags,
-	              (!state) ? RGW_OPEN_FLAG_V3 : RGW_OPEN_FLAG_NONE);
-
-	if (rc < 0) {
-		goto fileerr;
-	}
-
-	if (created && setattrs && attrib_set->valid_mask != 0) {
-		/* Set attributes using our newly opened file descriptor as the
-		 * share_fd if there are any left to set (mode and truncate
-		 * have already been handled).
-		 *
-		 * Note that we only set the attributes if we were responsible
-		 * for creating the file.
-		 */
-		status = (*new_obj)->obj_ops.setattr2(*new_obj,
-		                                      false,
-		                                      state,
-		                                      attrib_set);
-
-		if (FSAL_IS_ERROR(status)) {
-			/* Release the handle we just allocated. */
-			(*new_obj)->obj_ops.release(*new_obj);
-			*new_obj = NULL;
-			goto fileerr;
-		}
-
-		if (attrs_out != NULL) {
-			status = (*new_obj)->obj_ops.getattrs(*new_obj,
-			                                      attrs_out);
-			if (FSAL_IS_ERROR(status) &&
-			        (attrs_out->request_mask & ATTR_RDATTR_ERR) == 0) {
-				/* Get attributes failed and caller expected
-				 * to get the attributes. Otherwise continue
-				 * with attrs_out indicating ATTR_RDATTR_ERR.
-				 */
-				goto fileerr;
-			}
-		}
-	} else if (attrs_out != NULL) {
-		/* Since we haven't set any attributes other than what was set
-		 * on create (if we even created), just use the stat results
-		 * we used to create the fsal_obj_handle.
-		 */
-		posix2fsal_attributes_all(&st, attrs_out);
-	}
-
-	if (state != NULL) {
-		/* Prepare to take the share reservation, but only if we are
-		 * called with a valid state (if state is NULL the caller is
-		 * a stateless create such as NFS v3 CREATE).
-		 */
-
-		/* This can block over an I/O operation. */
-		PTHREAD_RWLOCK_wrlock(&(*new_obj)->obj_lock);
-
-		/* Take the share reservation now by updating the counters. */
-		update_share_counters(&handle->share, FSAL_O_CLOSED, openflags);
-
-		PTHREAD_RWLOCK_unlock(&(*new_obj)->obj_lock);
-	}
-
-	return fsalstat(ERR_FSAL_NO_ERROR, 0);
-
-fileerr:
-
-	/* Close the file we just opened. */
-	(void) rgw_close(export->rgw_fs, handle->rgw_fh,
-	                 RGW_CLOSE_FLAG_NONE);
-
-	if (created) {
-		/* Remove the file we just created */
-		(void) rgw_unlink(export->rgw_fs, handle->rgw_fh, name,
-		                  RGW_UNLINK_FLAG_NONE);
-	}
-
+	fsal_status_t status = fsalstat(ERR_FSAL_NO_ERROR, 0);
 	return status;
 }
+
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1128,7 +742,7 @@ return status;
 
 
 
-/**
+
 * @brief Remove a name
 *
 * This function removes a name from the filesystem and possibly
@@ -1140,8 +754,7 @@ return status;
 * @param[in] name    The name to remove
 *
 * @return FSAL status.
-*/
-/*
+
 static fsal_status_t qs_fsal_unlink(struct fsal_obj_handle *dir_hdl,
 				struct fsal_obj_handle *obj_hdl,
 				const char *name)
@@ -1263,7 +876,8 @@ fsal_status_t qs_fsal_reopen2(struct fsal_obj_handle * obj_hdl,
 	LogCrit(COMPONENT_FSAL,
 	        "=================== %s with obj_hdl: %p =====================",
 	        __func__, obj_hdl);
-	return status = {ERR_FSAL_NO_ERROR, 0};
+	fsal_status_t status = {ERR_FSAL_NO_ERROR, 0};
+	return status;
 
 }
 /*
@@ -1321,8 +935,8 @@ fsal_status_t rgw_fsal_reopen2(struct fsal_obj_handle * obj_hdl,
 	// perform a provider open iff not already open
 if (!fsal_is_open(obj_hdl)) {
 
-	/* XXX also, how do we know the ULP tracks opens?
-	 * 9P does, V3 does not
+	// XXX alo, how do we know the ULP tracks opens?
+	// 9P does, V3 does not
 
 	int rc = rgw_open(export->rgw_fs, handle->rgw_fh,
 	                  posix_flags,
@@ -1380,9 +994,10 @@ fsal_status_t qs_fsal_read2(struct fsal_obj_handle * obj_hdl,
 {
 
 	LogCrit(COMPONENT_FSAL,
-	        "=================== %s with obj_hdl: %p ,offset : %p, buffer_size: %p=====================",
-	        __func__, obj_hdl, offset, buffer_size);
-	return status = {ERR_FSAL_NO_ERROR, 0};
+	        "=================== %s with obj_hdl: %p ,offset : %d, buffer_size: %d=====================",
+	        __func__, obj_hdl, (int)offset, (int)buffer_size);
+	fsal_status_t status = {ERR_FSAL_NO_ERROR, 0};
+	return status;
 
 }
 /*
@@ -1452,9 +1067,10 @@ fsal_status_t qs_fsal_write2(struct fsal_obj_handle * obj_hdl,
                              struct io_info * info)
 {
 	LogCrit(COMPONENT_FSAL,
-	        "=================== %s with obj_hdl: %p ,offset : %p, buffer_size: %p=====================",
-	        __func__, obj_hdl, offset, buffer_size);
-	return status = {ERR_FSAL_NO_ERROR, 0};
+	        "=================== %s with obj_hdl: %p ,offset : %d, buffer_size: %d=====================",
+	        __func__, obj_hdl, (int)offset, (int)buffer_size);
+	fsal_status_t status = {ERR_FSAL_NO_ERROR, 0};
+	return status;
 
 }
 /*
@@ -1525,9 +1141,10 @@ fsal_status_t qs_fsal_commit2(struct fsal_obj_handle * obj_hdl,
 {
 
 	LogCrit(COMPONENT_FSAL,
-	        "=================== %s with obj_hdl: %p ,offset : %p, length: %p=====================",
-	        __func__, obj_hdl, offset, length);
-	return status = {ERR_FSAL_NO_ERROR, 0};
+	        "=================== %s with obj_hdl: %p ,offset : %d, length: %d=====================",
+	        __func__, obj_hdl,  (int)offset, (int)length);
+	fsal_status_t status = {ERR_FSAL_NO_ERROR, 0};
+	return status;
 
 }
 /*
@@ -1575,8 +1192,9 @@ struct state_t *qs_alloc_state(struct fsal_export * exp_hdl,
 	LogCrit(COMPONENT_FSAL,
 	        "=================== %s with exp_hdl: %p =====================",
 	        __func__, exp_hdl);
-	return status = {ERR_FSAL_NO_ERROR, 0};
-
+		
+	return init_state(gsh_calloc(1, sizeof(struct qs_fsal_open_state)),
+			exp_hdl, state_type, related_state);
 }
 /*
 struct state_t *rgw_alloc_state(struct fsal_export * exp_hdl,
@@ -1606,7 +1224,8 @@ fsal_status_t qs_fsal_close2(struct fsal_obj_handle * obj_hdl,
 	LogCrit(COMPONENT_FSAL,
 	        "=================== %s with obj_hdl: %p =====================",
 	        __func__, obj_hdl);
-	return status = {ERR_FSAL_NO_ERROR, 0};
+	fsal_status_t status = {ERR_FSAL_NO_ERROR, 0};
+	return status;
 }
 /*
 fsal_status_t qs_fsal_close2(struct fsal_obj_handle * obj_hdl,
@@ -1671,8 +1290,10 @@ fsal_status_t qs_fsal_close(struct fsal_obj_handle * handle_pub)
 	LogCrit(COMPONENT_FSAL,
 	        "=================== %s with handle_pub: %p =====================",
 	        __func__, handle_pub);
-	return status = {ERR_FSAL_NO_ERROR, 0};
+	fsal_status_t status = {ERR_FSAL_NO_ERROR, 0};
+	return status;
 }
+	
 /*
 static fsal_status_t rgw_fsal_close(struct fsal_obj_handle * handle_pub)
 {
@@ -1729,27 +1350,6 @@ static fsal_status_t handle_to_wire(const struct fsal_obj_handle * obj_hdl,
 
 
 /**
- * @brief Give a hash key for file handle
- *
- * This function locates a unique hash key for a given file.
- *
- * @param[in]  obj_hdl The file whose key is to be found
- * @param[out] fh_desc    Address and length of key
- */
-
-static void handle_to_key(struct fsal_obj_handle * obj_hdl,
-                          struct gsh_buffdesc * fh_desc)
-{
-	/* The private 'full' object handle */
-	struct qs_fsal_handle *handle = container_of(obj_hdl, struct qs_fsal_handle,
-	                                handle);
-
-	fh_desc->addr = &(handle->qs_fh->fh_hk);
-	fh_desc->len = sizeof(struct rgw_fh_hk);
-}
-
-
-/**
  * @brief Override functions in ops vector
  *
  * This function overrides implemented functions in the ops vector
@@ -1767,7 +1367,7 @@ void handle_ops_init(struct fsal_obj_ops * ops)
 	ops->create = qs_fsal_create;
 	ops->mkdir = qs_fsal_mkdir;
 	ops->readdir = qs_fsal_readdir;
-	ops->getattrs = getattrs;
+	ops->getattrs = qs_fsal_getattrs;
 	ops->rename = qs_fsal_rename;
 	//ops->unlink = rgw_fsal_unlink;
 	ops->close = qs_fsal_close;
