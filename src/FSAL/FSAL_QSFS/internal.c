@@ -13,7 +13,13 @@
 // | See the License for the specific language governing permissions and
 // | limitations under the License.
 // +-------------------------------------------------------------------------
+#include <sys/stat.h>
+#include "fsal_types.h"
+#include "fsal.h"
+#include "fsal_convert.h"
+#include "FSAL/fsal_commonlib.h"
 
+//#define RGW_INTERNAL_C
 #include "internal.h"
 
 struct qs_fsal_module QSFSM;
@@ -164,7 +170,7 @@ fsal_status_t qs2fsal_error(const int rgw_errorcode)
  * @return 0 on success, negative error codes on failure.
  */
 
-int construct_handle(struct qingstor_export *export,
+int construct_handle(struct qs_fsal_export *export,
                      struct qingstor_file_handle *qingstor_fh,
                      struct stat *st,
                      struct qs_fsal_handle **obj)
@@ -178,7 +184,7 @@ int construct_handle(struct qingstor_export *export,
 	if (constructing == NULL)
 		return -ENOMEM;
 
-	constructing->qingstor_fh = qingstor_fh;
+	constructing->qs_fh = qingstor_fh;
 	constructing->up_ops = export->export.up_ops; /* XXXX going away */
 
 	fsal_obj_handle_init(&constructing->handle, &export->export,

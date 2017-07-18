@@ -24,6 +24,7 @@
 #ifndef FSAL_QINGSTOR_INTERNAL_INTERNAL
 #define FSAL_QINGSTOR_INTERNAL_INTERNAL
 
+
 #include "fsal.h"
 #include "fsal_types.h"
 #include "fsal_api.h"
@@ -81,6 +82,13 @@ struct qs_fsal_handle {
 					 *< belongs to */
 	struct fsal_share share;
 	fsal_openflags_t openflags;
+};
+
+struct qs_fsal_cb_arg {
+	fsal_readdir_cb cb;
+	void *fsal_arg;
+	struct fsal_obj_handle *dir_hdl;
+	attrmask_t attrmask;
 };
 
 /**

@@ -6,6 +6,8 @@
 
 using namespace QingStor;
 
+std::atomic<uint32_t> QsFileSystem::fs_inst_counter;
+
 QsFileHandle::QsFileHandle(QsFileSystem* fs, uint32_t fs_inst, QsFileHandle* _parent,
                            const QsFHKey& _fhk, const std::string& _name, uint32_t _flags)
   : fs(fs), bucket(nullptr), parent(_parent), name(std::move(_name)),
@@ -459,9 +461,7 @@ QsFileSystem::QsFileSystem(LibSDK _libSDK, const char *_uid)
   //uid(_uid), key(_user_id, _key) {
 
   /* no bucket may be named qs_fs-(.*) */
-  char * inst = NULL;
-  sprintf(inst, "%d", get_inst());
-  std::string fsid = root_name + "qs_fs-" + inst;
+  std::string fsid = root_name + "qs_fs-" + std::to_string(get_inst());
 
   rootFH.initRootFS(fsid /* bucket */, root_name);
 
@@ -479,6 +479,12 @@ QsFileHandle* QsFileSystem::createFileHandle(QsFileHandle* parent, const std::st
 
   return new QsFileHandle(this, get_inst(), parent, fhk, obj_name, flags);
 }
+
+
+void QsFileSystem::releaseFileHandle(QsFileHandle *qsFileHandle) {
+  if (qsFileHandle)
+    delete qsFileHandle;
+};
 
 void QsFileSystem:: close() {
   //state.flags |= FLAG_CLOSE;
