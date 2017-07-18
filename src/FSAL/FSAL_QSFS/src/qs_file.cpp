@@ -427,9 +427,7 @@ QsFileSystem::QsFileSystem(LibSDK _libSDK, const char *_uid)
   //uid(_uid), key(_user_id, _key) {
 
   /* no bucket may be named qs_fs-(.*) */
-  char * inst = NULL;
-  sprintf(inst, "%d", get_inst());
-  std::string fsid = root_name + "qs_fs-" + inst;
+  std::string fsid = root_name + "qs_fs-" + std::to_string(get_inst());
 
   rootFH.initRootFS(fsid /* bucket */, root_name);
 

@@ -9,13 +9,14 @@ SET(libqsfs_LIB_SRCS
 	qs_file.h
 	libqingstor.cpp
 	libqingstor.h
+	XXHash/xxhash.c
 )
 
 include_directories(${CUKE_INCLUDE_DIRS} ./include)
 
-add_library(libqsfs ${libqsfs_LIB_SRCS})
+add_library(qsfs MODULE ${libqsfs_LIB_SRCS})
 
-target_link_libraries(libqsfs  /root/Github/ganesha4q/src/libqingstor.so /root/Github/ganesha4q/lib/libjsoncpp.so)
+target_link_libraries(qsfs  /root/Github/ganesha4q/src/libqingstor.so /root/Github/ganesha4q/lib/libjsoncpp.so)
 
 #if(GMOCK_FOUND)
     #add_executable(GTestBucketSteps src/GTestBucketSteps.cpp)

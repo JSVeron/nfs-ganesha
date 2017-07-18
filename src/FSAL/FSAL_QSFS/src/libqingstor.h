@@ -15,10 +15,13 @@
 #define QS_SETATTR_SIZE   32
 #define QS_SETATTR_CTIME  64
 
+#ifdef __cplusplus
+extern "C"{
+#endif
 ////////////////////////////////////////////////////////////////////////////////////////////////
 typedef void* libqs_t;
 
-int librqs_create(libqs_t libqsfs, const char* conf_path);//库初始化
+int librqs_create(libqs_t* libqsfs, const char* conf_path);//库初始化
 void libqsfs_shutdown(libqs_t libqsfs); //库去初始化
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -187,3 +190,7 @@ events.push_back(ev);
 
 */
 /////////////////////////////////////////////
+
+#ifdef __cplusplus
+}
+#endif

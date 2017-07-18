@@ -1,6 +1,7 @@
 add_definitions(
   -D_FILE_OFFSET_BITS=64
 )
+SET(CMAKE_BUILD_TYPE "Debug")
 
 SET(fsalqsfs_LIB_SRCS
   #up.c

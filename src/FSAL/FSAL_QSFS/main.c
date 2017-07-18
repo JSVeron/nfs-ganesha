@@ -26,7 +26,9 @@
 #include "nfs_exports.h"
 #include "export_mgr.h"
 
-static const char *module_name = "QINGSTOR";
+
+
+static const char *module_name = "QSFS";
 
 static struct fsal_staticfsinfo_t default_qingstor_info = {
 	.maxfilesize = UINT64_MAX,
@@ -75,7 +77,7 @@ static struct config_item qingstor_items[] = {
 
 struct config_block qingstor_block = {
 	.dbus_interface_name = "org.ganesha.nfsd.config.fsal.qingstor",
-	.blk_desc.name = "QINGSTOR",
+	.blk_desc.name = "QSFS",
 	.blk_desc.type = CONFIG_BLOCK,
 	.blk_desc.u.blk.init = noop_conf_init,
 	.blk_desc.u.blk.params = qingstor_items,
@@ -146,11 +148,11 @@ bool support_ex(struct fsal_obj_handle *obj)
 
 static struct config_item export_params[] = {
 	CONF_ITEM_NOOP("name"),
-	//CONF_MAND_STR("user_id", 0, MAXUIDLEN, NULL,
-	//qs_fsal_export, qingstor_user_id),
+	CONF_MAND_STR("qs_fsal_user_id", 0, MAXUIDLEN, NULL,
+	qs_fsal_export, qs_fsal_user_id),
 	CONF_MAND_STR("qs_fsal_bucket_name", 0, MAXKEYLEN, NULL,
-	qs_fsal_export, qs_fsal_zone),
-	CONF_MAND_STR("qs_fsal_bucket_name", 0, MAXSECRETLEN, NULL,
+	qs_fsal_export, qs_fsal_bucket_name),
+	CONF_MAND_STR("qs_fsal_zone", 0, MAXSECRETLEN, NULL,
 	qs_fsal_export, qs_fsal_zone),
 	CONFIG_EOL
 };
@@ -190,12 +192,18 @@ static fsal_status_t create_export(struct fsal_module *module_in,
 		if (!QSFSM.libqsfs) {
 
 			if (QSFSM.conf_path) {
-				rc = librqs_create(QSFSM.libqsfs, QSFSM.conf_path);
+				rc = librqs_create(&QSFSM.libqsfs, QSFSM.conf_path);
 				if (rc != 0) {
 					LogCrit(COMPONENT_FSAL,
 					        "QINGSTOR module: librqs init failed (%d)",
 					        rc);
 				}
+			}
+			else
+			{
+				rc = -EINVAL;
+				LogCrit(COMPONENT_FSAL,
+					        "QINGSTOR module: there QingStor config path info.");
 			}
 		}
 		PTHREAD_MUTEX_unlock(&init_mtx);

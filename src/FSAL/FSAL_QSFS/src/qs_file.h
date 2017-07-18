@@ -182,11 +182,12 @@ public:
   }
 
 
+  bool isDir() const { return fh.fh_type & QS_FS_TYPE_DIRECTORY; };
+  bool isFile() const { return fh.fh_type & QS_FS_TYPE_FILE; };
 
-  bool isBucket() const { flags & QS_FS_FLAG_ROOT; };
-  bool isRoot() const { flags & QS_FS_FLAG_BUCKET; };
-  bool isDir() const { flags & QS_FS_FLAG_DIRECTORY; };
-  bool isOpen() const { flags & QS_FS_FLAG_OPEN; };
+  bool isRoot() const { return flags & QS_FS_FLAG_ROOT; };
+  bool isBucket() const { return flags & QS_FS_FLAG_BUCKET; };
+  bool isOpen() const { return flags & QS_FS_FLAG_OPEN; };
 
   void initRootFS(std::string& fsid, const std::string& objectName) {
     /* fh_key */
