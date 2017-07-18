@@ -6,6 +6,8 @@
 
 using namespace QingStor;
 
+std::atomic<uint32_t> QsFileSystem::fs_inst_counter;
+
 QsFileHandle::QsFileHandle(QsFileSystem* fs, uint32_t fs_inst, QsFileHandle* _parent,
                            const QsFHKey& _fhk, const std::string& _name, uint32_t _flags)
   : fs(fs), bucket(nullptr), parent(_parent), name(std::move(_name)),
@@ -445,6 +447,11 @@ QsFileHandle* QsFileSystem::createFileHandle(QsFileHandle* parent, const std::st
 
   return new QsFileHandle(this, get_inst(), parent, fhk, obj_name, flags);
 }
+
+void QsFileSystem::releaseFileHandle(QsFileHandle *qsFileHandle){
+  if(qsFileHandle)
+    delete qsFileHandle;
+};
 
 void QsFileSystem:: close(){
   //state.flags |= FLAG_CLOSE;

@@ -31,7 +31,7 @@ if(QSFS_PREFIX)
     message("QSFS_INCLUDE_DIR = ${QSFS_INCLUDE_DIR}")
 
   find_path(QSFS_LIBRARY_DIR
-    NAMES libqsfs.a
+    NAMES libqsfs.so
     PATHS ${QSFS_PREFIX}
     PATH_SUFFIXES lib lib64
     NO_DEFAULT_PATH
@@ -51,13 +51,13 @@ endif (NOT QSFS_INCLUDE_DIR)
 if (NOT QSFS_LIBRARY_DIR)
 # will find lib and headr file in default path
   find_path(QSFS_LIBRARY_DIR
-    NAMES libqsfs.a
+    NAMES qsfs.so
     PATHS ${QSFS_PREFIX}
     PATH_SUFFIXES lib lib64
     DOC "The QingStor libraries")
 endif (NOT QSFS_LIBRARY_DIR)
 
-find_library(QSFS_LIBRARY libqsfs.a PATHS ${QSFS_LIBRARY_DIR} NO_DEFAULT_PATH)
+find_library(QSFS_LIBRARY qsfs.so PATHS ${QSFS_LIBRARY_DIR} NO_DEFAULT_PATH)
 check_library_exists(qsfs qingstor_mount ${QSFS_LIBRARY_DIR} QSFSLIB)
 if (NOT QSFSLIB)
   unset(QSFS_LIBRARY_DIR CACHE)
