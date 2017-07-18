@@ -80,7 +80,7 @@ const std::string QsFileHandle::getObjectKey(bool omit_bucket) const
 QsFsError QsFileHandle::readDir(qingstor_readdir_callback readCallback, void *cb_arg, uint64_t *offset,
                                 bool *eof)
 {
-  
+
   Bucket * qsBucket = fs->libSDK.qsBucket;
   ListObjectsInput input;
   ListObjectsOutput output;
@@ -197,7 +197,41 @@ void QsFileHandle::createStat(struct stat* st, uint32_t mask)
   return;
 }
 
+QSFHResult QsFileSystem::statBucket(QsFileHandle* parent, const const std::string path,
+                                    QsFileSystem::BucketStats& bs,
+                                    uint32_t flags)
+{
 
+  GetBucketStatisticsInput input;
+  GetBucketStatisticsOutput output;
+
+  QsError err = libSDK.qsBucket->getBucketStatistics(input, output);
+  if ( QsError::QS_ERR_NO_ERROR != err)
+  {
+    // log here
+    return QSFHResult(QsFsError::QS_FS_ERR_NTWORK_ERROR);
+  }
+
+  auto respCode = output.GetResponseCode();
+  if ( Http::HttpResponseCode::OK == respCode) {
+
+    bs.size = (size_t)output.GetSize();
+    bs.num_entries = (size_t)output.GetCreated();
+    timespec timespec = QsFileHandle::getTimespecFrommString(output.GetCreated());;
+    bs.creation_time = timespec;
+    //output.GetStatus();
+    // hard code here for test
+    fh = createFileHandle(parent, "huang-stor", flags);
+    fh->setMtimes(timespec);
+    fh->setSize(bs.size);
+
+    return QSFHResult(fh);
+  }
+  else ( Http::HttpResponseCode::NOT_FOUND == respCode) {
+    // log here
+    return QSFHResult(QsFsError::QS_FS_ERR_UNKNOWN);
+  }
+}
 
 ///////////////
 QSFHResult QsFileSystem::lookupFileHandle(QsFileHandle* parent, const std::string name, uint32_t flags) {
@@ -446,7 +480,7 @@ QsFileHandle* QsFileSystem::createFileHandle(QsFileHandle* parent, const std::st
   return new QsFileHandle(this, get_inst(), parent, fhk, obj_name, flags);
 }
 
-void QsFileSystem:: close(){
+void QsFileSystem:: close() {
   //state.flags |= FLAG_CLOSE;
 };
 //

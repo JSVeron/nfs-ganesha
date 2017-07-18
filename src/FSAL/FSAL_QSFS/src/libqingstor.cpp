@@ -36,9 +36,17 @@ int qingstor_lookup(struct qingstor_file_system *qs_fs,
   QsFileHandle* fh;
   QSFHResult reuslt(QS_FS_ERR_NO_ERROR);
 
-  if (parent->isRoot() &&
-      unlikely((strcmp(path, "..") == 0) || (strcmp(path, "/") == 0))) {
-    fh = parent;
+  if (parent->isRoot() )
+  {
+    if (unlikely((strcmp(path, "..") == 0) || (strcmp(path, "/") == 0))) {
+      fh = parent;
+    }
+    else
+    {
+      QsFileSystem::BucketStats bstat;
+      reuslt = fs->statBucket(parent, path, bstat, RGWFileHandle::FLAG_NONE);
+      fh = reuslt.getFH();
+    }
   }
   else {
     reuslt = fs->lookupFileHandle(parent, path, flags);

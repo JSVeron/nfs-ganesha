@@ -170,7 +170,7 @@ public:
   };
 
 
-  timespec getTimespecFrommString(const std::string timebuf) {
+  static timespec getTimespecFrommString(const std::string timebuf) {
     timespec timespec;
     time_t lt = time(NULL);
     struct tm* ptr = localtime(&lt);
@@ -341,6 +341,9 @@ public:
   //QsFileSystem(LibSDK _libSDK, const char *_uid, const char *_bucket_name, const char* _zone);
   QsFileSystem(LibSDK _libSDK, const char *_uid);
 
+  QSFHResult statBucket(QsFileHandle* parent, const const std::string path,
+                        QsFileSystem::BucketStats& bs,
+                        uint32_t flags);
   QSFHResult lookupFileHandle(QsFileHandle* parent, const std::string name, uint32_t flags);
   QSFHResult touchFile(QsFileHandle* parent, const char *name,
                        struct stat *st, uint32_t mask);
